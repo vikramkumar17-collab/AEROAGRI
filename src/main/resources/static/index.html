@@ -1,0 +1,2045 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AEROAGRI - LiDAR Agricultural Microdrone Monitoring Platform</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Space Grotesk"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            canvas: '#07080b',
+            surface: {
+              DEFAULT: '#0d0f15',
+              card: '#121520',
+              elevated: '#181c2b',
+              border: '#23283b',
+              borderGlow: 'rgba(139, 92, 246, 0.35)'
+            },
+            violet: {
+              electric: '#8b5cf6',
+              deep: '#7c3aed',
+              light: '#a78bfa',
+              pale: '#ddd6fe'
+            },
+            status: {
+              normal: '#10b981',
+              attention: '#f59e0b',
+              critical: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      background-color: #07080b;
+      color: #f1f5f9;
+      font-family: 'Space Grotesk', sans-serif;
+      overflow-x: hidden;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0d0f15;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #23283b;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #8b5cf6;
+    }
+    .scan-beam-fx {
+      background: linear-gradient(180deg, rgba(139, 92, 246, 0.0) 0%, rgba(139, 92, 246, 0.25) 50%, rgba(167, 139, 250, 0.6) 100%);
+    }
+    .glow-violet {
+      box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.35);
+    }
+    .glow-amber {
+      box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.4);
+    }
+    .glow-green {
+      box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.3);
+    }
+    .glass-card {
+      background: rgba(18, 21, 32, 0.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid #23283b;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#07080b] text-slate-100 selection:bg-violet-600 selection:text-white">
+<!-- ========================================================================= -->
+<!-- 1. FULL-SCREEN LOGIN EXPERIENCE (WITH RIGHT-SIDE HERO 3D DRONE & CROPS)   -->
+<!-- ========================================================================= -->
+<section class="relative w-full h-screen overflow-hidden flex flex-col md:flex-row z-50 bg-[#07080b] transition-opacity duration-500" id="login-view">
+<!-- Left Login Card & Credentials -->
+<div class="w-full md:w-[460px] lg:w-[490px] h-full flex-shrink-0 bg-[#0c0e14] border-r border-[#1e2333] z-20 flex flex-col justify-between p-8 sm:p-10 shadow-2xl relative">
+<!-- Top Brand Tag -->
+<div>
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 rounded-lg overflow-hidden border border-violet-500/30 flex items-center justify-center bg-[#131622]">
+<img alt="AEROAGRI Logo" class="w-8 h-8 object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VLQ47SQ993gjq4F27ffoYw10TgNEn8A-mqG96Mdbwy8zmVYcgayKsQkBPl1bZOcaxWRt2qPQ7W3Cqp7bbwgKailoa2cXO1JoPLynEOoMZ113vlwdCK2qJ2cXxuWKJiI66UIHpMLfq-9Gj_C8Yk-7phe51pZLM33aPyDoW_MHrGqOmxmMnEV1EGkXKazwoxoGSZUSDFA8vSpA9quQ8L1asGtnS2UUypZWy89nOaREOg2w"/>
+</div>
+<div>
+<div class="text-xl font-bold tracking-wider text-white flex items-center gap-2">
+              AEROAGRI
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-950/80 border border-violet-700/50 text-violet-300">v2.4-SIM</span>
+</div>
+<p class="text-[11px] uppercase tracking-widest text-slate-400 font-mono">Precision Aerial Telemetry</p>
+</div>
+</div>
+<div class="mb-8">
+<h1 class="text-2xl font-bold text-white mb-2 tracking-tight">Agricultural Microdrone Monitoring Platform</h1>
+<p class="text-xs text-slate-400 leading-relaxed">
+            Welcome back. Sign in to access your agricultural monitoring system and real-time field crop telemetry.
+          </p>
+</div>
+<!-- Login Form -->
+<form class="space-y-4" id="login-form" onsubmit="handleLoginSubmit(event)">
+<div>
+<label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-1.5">
+              Email / Operator ID
+            </label>
+<div class="relative">
+<input class="w-full bg-[#121520] border border-[#23283b] focus:border-violet-500 focus:ring-1 focus:ring-violet-500 text-sm text-slate-100 rounded-lg px-4 py-2.5 font-mono placeholder-slate-600 outline-none transition" id="login-email" required="" type="text" value="field.operator@aeroagri.farm"/>
+</div>
+</div>
+<div>
+<label class="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-1.5">
+              Password
+            </label>
+<div class="relative">
+<input class="w-full bg-[#121520] border border-[#23283b] focus:border-violet-500 focus:ring-1 focus:ring-violet-500 text-sm text-slate-100 rounded-lg pl-4 pr-11 py-2.5 font-mono placeholder-slate-600 outline-none transition" id="login-password" required="" type="password" value="AgriDrone2025#"/>
+<!-- Functional Password Eye Button -->
+<button class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-violet-300 rounded hover:bg-slate-800/60 transition" id="toggle-pwd-btn" onclick="togglePasswordVisibility()" title="Toggle password visibility" type="button">
+<!-- Eye Icon (hidden initially) -->
+<svg class="w-4 h-4 hidden" fill="none" id="eye-icon-open" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<!-- Eye Off Icon (visible initially) -->
+<svg class="w-4 h-4" fill="none" id="eye-icon-closed" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between text-xs pt-1">
+<label class="flex items-center gap-2 text-slate-400 cursor-pointer">
+<input checked="" class="w-4 h-4 rounded bg-[#121520] border-[#23283b] text-violet-600 focus:ring-0" type="checkbox"/>
+<span>Remember me</span>
+</label>
+<a class="text-violet-400 hover:text-violet-300 font-mono transition" href="#" onclick="event.preventDefault()">Forgot password?</a>
+</div>
+<button class="w-full mt-4 bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition duration-200 shadow-lg shadow-violet-900/30 group" id="signin-btn" type="submit">
+<span>SIGN IN TO DASHBOARD</span>
+<svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</form>
+</div>
+<!-- Bottom Simulation Badge & Hardware Info -->
+<div class="pt-6 border-t border-[#1e2333]/80">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+<span class="text-[11px] font-mono font-medium text-amber-300 tracking-wider">SIMULATION MODE</span>
+</div>
+<span class="text-[11px] font-mono text-slate-400">HARDWARE ID: AGRI-01</span>
+</div>
+<p class="text-[11px] text-slate-400 mt-2 font-mono">
+          Interactive agricultural simulation. Direct sensor connection to virtual crop field.
+        </p>
+</div>
+</div>
+<!-- Right Hero Section: Live 3D Drone Hovering Over Agricultural Crops -->
+<div class="flex-1 h-full relative overflow-hidden bg-[#07080b]">
+<!-- 3D Canvas Mount (Reused on Dashboard) -->
+<div class="absolute inset-0 w-full h-full" id="threejs-drone-field-container"></div>
+<!-- Hero Product Overlays & Telemetry Badges (Semi-transparent gradient so 3D drone is never obscured) -->
+<div class="absolute inset-0 pointer-events-none p-8 md:p-12 flex flex-col justify-between z-10 bg-gradient-to-t from-[#07080b]/90 via-transparent to-[#07080b]/60">
+<!-- Top Telemetry Pill -->
+<div class="flex items-center justify-between">
+<div class="glass-card px-4 py-2 rounded-full flex items-center gap-3 pointer-events-auto">
+<span class="w-2 h-2 rounded-full bg-status-normal animate-ping"></span>
+<span class="text-xs font-mono text-slate-200">AUTONOMOUS AGRICULTURAL MICRODRONE</span>
+<span class="text-slate-600">|</span>
+<span class="text-xs font-mono text-violet-400 font-semibold">PRECISION LiDAR</span>
+</div>
+<div class="hidden sm:flex items-center gap-2 glass-card px-3.5 py-1.5 rounded-lg text-[11px] font-mono text-slate-400">
+<span>ROTORS: <strong class="text-status-normal">4 ACTIVE</strong></span>
+<span>•</span>
+<span>BEAM: <strong class="text-violet-400">905nm PULSED</strong></span>
+</div>
+</div>
+<!-- Center Prompt Note for Context -->
+<div class="max-w-md pointer-events-auto">
+<div class="inline-block px-2.5 py-1 rounded bg-violet-500/10 border border-violet-500/20 text-violet-300 font-mono text-[11px] uppercase tracking-wider mb-2">
+            CROP CANOPY SCANNING
+          </div>
+<h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-snug">
+            Autonomous Drone-Based Sensing &amp; Real-Time Crop Analysis
+          </h2>
+<p class="text-xs text-slate-300 mt-2 leading-relaxed">
+            Continuously mapping crop height, canopy structure, and field sector variability with millimetric optical ranging.
+          </p>
+<!-- Quick Live Telemetry Badges -->
+<div class="grid grid-cols-3 gap-3 mt-5">
+<div class="glass-card p-3 rounded-lg border-violet-500/20">
+<span class="text-[10px] uppercase font-mono text-slate-400 block">LiDAR CANOPY</span>
+<span class="text-base font-bold font-mono text-violet-300">42 cm</span>
+</div>
+<div class="glass-card p-3 rounded-lg border-violet-500/20">
+<span class="text-[10px] uppercase font-mono text-slate-400 block">GPS TARGET</span>
+<span class="text-base font-bold font-mono text-slate-200">FIELD A</span>
+</div>
+<div class="glass-card p-3 rounded-lg border-violet-500/20">
+<span class="text-[10px] uppercase font-mono text-slate-400 block">IMU STABILIZER</span>
+<span class="text-base font-bold font-mono text-status-normal">STABLE</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- 2. MAIN APPLICATION WORKSPACE (DASHBOARD & FIELD SCAN TABS)              -->
+<!-- ========================================================================= -->
+<main class="hidden min-h-screen flex flex-col bg-[#07080b] relative" id="app-workspace">
+<!-- Top Persistent Navigation Header -->
+<header class="h-16 border-b border-[#1f2438] bg-[#0c0e15]/95 backdrop-blur sticky top-0 z-40 px-4 md:px-8 flex items-center justify-between">
+<!-- Brand & Project -->
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg overflow-hidden border border-violet-500/30 flex items-center justify-center bg-[#131622]">
+<img alt="AEROAGRI Logo" class="w-7 h-7 object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VLQ47SQ993gjq4F27ffoYw10TgNEn8A-mqG96Mdbwy8zmVYcgayKsQkBPl1bZOcaxWRt2qPQ7W3Cqp7bbwgKailoa2cXO1JoPLynEOoMZ113vlwdCK2qJ2cXxuWKJiI66UIHpMLfq-9Gj_C8Yk-7phe51pZLM33aPyDoW_MHrGqOmxmMnEV1EGkXKazwoxoGSZUSDFA8vSpA9quQ8L1asGtnS2UUypZWy89nOaREOg2w"/>
+</div>
+<span class="font-bold tracking-wider text-base text-white">AEROAGRI</span>
+</div>
+<!-- Navigation Links -->
+<nav class="hidden md:flex items-center gap-1 font-mono text-xs">
+<button class="px-3.5 py-1.5 rounded-md bg-violet-600/20 border border-violet-500 text-violet-200 font-medium transition" id="tab-btn-dashboard" onclick="switchTab('dashboard')">
+            DASHBOARD
+          </button>
+<button class="px-3.5 py-1.5 rounded-md hover:bg-slate-800/60 border border-transparent text-slate-400 hover:text-slate-200 transition" id="tab-btn-field-scan" onclick="switchTab('field-scan')">
+            FIELD SCAN
+          </button>
+<button class="px-3.5 py-1.5 rounded-md hover:bg-slate-800/60 border border-transparent text-slate-400 hover:text-slate-200 transition" id="tab-btn-sensor-data" onclick="switchTab('sensor-data')">
+            SENSOR DATA
+          </button>
+<button class="px-3.5 py-1.5 rounded-md hover:bg-slate-800/60 border border-transparent text-slate-400 hover:text-slate-200 transition" id="tab-btn-results" onclick="switchTab('results')">
+            RESULTS
+          </button>
+</nav>
+</div>
+<!-- Right Header Actions (PROMINENT SIGN OUT AS REQUIRED) -->
+<div class="flex items-center gap-3 sm:gap-4">
+<!-- Simulation Mode Tag -->
+<div class="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded bg-amber-950/40 border border-amber-500/40 text-amber-300 text-[11px] font-mono">
+<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+<span>SIMULATION MODE</span>
+</div>
+<!-- Demo Mode Switcher (Healthy vs Problem Demo) -->
+<div class="flex items-center p-1 bg-[#121522] border border-[#23283b] rounded-lg text-xs font-mono">
+<button class="px-2.5 py-1 rounded bg-violet-600 text-white font-medium transition" id="btn-demo-healthy" onclick="setDemoState('healthy')">
+            HEALTHY
+          </button>
+<button class="px-2.5 py-1 rounded text-slate-400 hover:text-amber-300 transition" id="btn-demo-problem" onclick="setDemoState('problem')">
+            PROBLEM DEMO
+          </button>
+</div>
+<!-- Field Operator Profile Card -->
+<div class="flex items-center gap-2.5 pl-2 border-l border-slate-800">
+<div class="w-8 h-8 rounded-full bg-violet-950 border border-violet-500/50 flex items-center justify-center font-mono text-xs font-bold text-violet-300">
+            OP
+          </div>
+<div class="hidden lg:block text-left leading-tight">
+<span class="block text-xs font-semibold text-slate-200">Field Operator</span>
+<span class="block text-[10px] font-mono text-slate-400">ID: AGRI-OP-04</span>
+</div>
+</div>
+<!-- PROMINENT SIGN OUT BUTTON (REQUIREMENT 7 & 26) -->
+<button class="flex items-center gap-1.5 bg-red-950/30 hover:bg-red-900/50 text-red-300 hover:text-red-100 border border-red-700/40 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition" onclick="handleSignOut()" title="End session and return to login">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>SIGN OUT</span>
+</button>
+</div>
+</header>
+<!-- Sub-header Alert Banner (Displays when Problem Demo is active) -->
+<div class="hidden bg-amber-950/70 border-b border-amber-600/50 px-6 py-2.5 text-xs text-amber-200 flex items-center justify-between z-30 transition-all" id="problem-alert-banner">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-amber-500 text-black font-mono font-bold text-[10px]">ATTENTION</span>
+<span class="font-medium">Problem Demo Active: Stunted Crop Height Detected in <strong>Sector B — Row 4 (21 cm)</strong>.</span>
+</div>
+<button class="text-xs font-mono underline hover:text-white transition" onclick="focusOnAffectedArea()">
+        [ VIEW ON 3D FIELD ]
+      </button>
+</div>
+<!-- Main Dynamic Content Container -->
+<div class="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+<!-- ===================================================================== -->
+<!-- TAB 1: AGRICULTURAL DASHBOARD                                         -->
+<!-- ===================================================================== -->
+<div class="p-4 md:p-6 lg:p-8 space-y-6" id="tab-dashboard">
+<!-- Welcome & Primary Action Bar -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800/80">
+<div>
+<div class="flex items-center gap-2.5">
+<h1 class="text-xl md:text-2xl font-bold text-white tracking-tight">Agricultural Monitoring</h1>
+<span class="px-2 py-0.5 rounded bg-status-normal/10 border border-status-normal/30 text-status-normal text-[11px] font-mono">
+                TELEMETRY ACTIVE
+              </span>
+</div>
+<p class="text-xs text-slate-400 mt-0.5">
+              Monitor your field using microdrone-based LiDAR sensing and crop canopy analysis.
+            </p>
+</div>
+<!-- PRIMARY ACTION: START NEW SCAN BUTTON -->
+<div class="flex items-center gap-3">
+<button class="bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold px-4 py-2.5 rounded-lg flex items-center gap-2.5 shadow-lg shadow-violet-900/30 transition group" id="start-scan-btn-dash" onclick="triggerFullScanWorkflow()">
+<span class="w-2 h-2 rounded-full bg-white group-hover:animate-ping"></span>
+<span>START NEW SCAN</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+<!-- 3-Column Top Grid: Drone Status & Environmental Context -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Compact Drone Status Card -->
+<div class="glass-card p-4 rounded-xl border-[#23283b]">
+<div class="flex items-center justify-between mb-3">
+<span class="text-[11px] font-mono uppercase text-slate-400">HARDWARE ID</span>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">SIMULATED</span>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<span class="text-xs text-slate-400 block font-mono">DRONE</span>
+<span class="text-lg font-bold font-mono text-white">AGRI-01</span>
+</div>
+<div class="text-right">
+<span class="text-xs text-slate-400 block font-mono">STATUS</span>
+<span class="text-sm font-semibold text-status-normal font-mono flex items-center gap-1.5 justify-end" id="drone-status-text">
+<span class="w-2 h-2 rounded-full bg-status-normal animate-pulse"></span>
+                  Hovering / Idle
+                </span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/80 text-center font-mono">
+<div>
+<span class="text-[10px] text-slate-400 block">BATTERY</span>
+<span class="text-xs font-bold text-slate-200" id="dash-battery">100%</span>
+</div>
+<div>
+<span class="text-[10px] text-slate-400 block">FIELD</span>
+<span class="text-xs font-bold text-violet-300" id="dash-field">Field A</span>
+</div>
+<div>
+<span class="text-[10px] text-slate-400 block">SCAN</span>
+<span class="text-xs font-bold text-status-normal" id="drone-scan-ready">Ready</span>
+</div>
+</div>
+</div>
+<!-- Environmental Context Card (Agricultural context clearly marked as SIMULATED) -->
+<div class="glass-card p-4 rounded-xl border-[#23283b]">
+<div class="flex items-center justify-between mb-3">
+<span class="text-[11px] font-mono uppercase text-slate-400">FIELD ENVIRONMENT</span>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-950/70 text-violet-300 border border-violet-800/40">SIMULATED ENVIRONMENT DATA</span>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div>
+<span class="text-[10px] font-mono text-slate-400 block">TEMPERATURE</span>
+<span class="text-lg font-bold font-mono text-white">28°C</span>
+</div>
+<div>
+<span class="text-[10px] font-mono text-slate-400 block">SEASON</span>
+<span class="text-lg font-bold font-mono text-violet-300">KHARIF</span>
+</div>
+<div>
+<span class="text-[10px] font-mono text-slate-400 block">CONDITION</span>
+<span class="text-sm font-bold font-mono text-status-normal pt-1 block">SUITABLE</span>
+</div>
+</div>
+<p class="text-[10px] text-slate-400 mt-3 pt-3 border-t border-slate-800 font-mono">
+              Ambient agrometeorological index for Field A Kharif sowing canopy.
+            </p>
+</div>
+<!-- Secondary Telemetry Overview -->
+<div class="glass-card p-4 rounded-xl border-[#23283b]">
+<div class="flex items-center justify-between mb-3">
+<span class="text-[11px] font-mono uppercase text-slate-400">FLIGHT TELEMETRY</span>
+<span class="text-[10px] font-mono text-status-normal">FLIGHT: NORMAL</span>
+</div>
+<div class="grid grid-cols-2 gap-y-2 gap-x-4 text-xs font-mono">
+<div class="flex justify-between border-b border-slate-800/60 pb-1">
+<span class="text-slate-400">Scan Altitude:</span>
+<span class="text-slate-200 font-semibold">18.4 m</span>
+</div>
+<div class="flex justify-between border-b border-slate-800/60 pb-1">
+<span class="text-slate-400">Scan Coverage:</span>
+<span class="text-violet-300 font-semibold" id="dash-scan-coverage">68%</span>
+</div>
+<div class="flex justify-between">
+<span class="text-slate-400">Signal (Uplink):</span>
+<span class="text-slate-200 font-semibold">98%</span>
+</div>
+<div class="flex justify-between">
+<span class="text-slate-400">Flight Status:</span>
+<span class="text-status-normal font-semibold">Flying</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 3 Prominent Primary Sensor Cards (LiDAR, GPS, IMU) -->
+<div>
+<div class="text-xs font-mono uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+<span>Primary Sensor Array</span>
+<span class="text-[11px] text-violet-400" id="hw-label">DIRECT HARDWARE TELEMETRY</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- LiDAR Card -->
+<div class="glass-card p-5 rounded-xl border-violet-500/40 glow-violet relative overflow-hidden">
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs font-mono uppercase text-violet-400 font-semibold tracking-wider">LiDAR OPTICAL CANOPY</span>
+<span class="px-2 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-800 text-[10px] font-mono">STABLE</span>
+</div>
+<div class="flex items-baseline gap-2 my-1">
+<span class="text-3xl lg:text-4xl font-extrabold font-mono text-white" id="dash-lidar-val">42</span>
+<span class="text-sm font-mono text-violet-400">cm</span>
+</div>
+<p class="text-xs text-slate-400 mt-1">Optical Distance to Crop Canopy</p>
+<div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] font-mono text-slate-400 flex justify-between">
+<span>Wavelength: 905 nm</span>
+<span>Accuracy: ±0.4 cm</span>
+</div>
+</div>
+<!-- GPS Card -->
+<div class="glass-card p-5 rounded-xl border-[#23283b] relative">
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs font-mono uppercase text-slate-300 font-semibold tracking-wider">GPS GEOLOCATION</span>
+<span class="px-2 py-0.5 rounded bg-emerald-950 text-status-normal border border-emerald-800 text-[10px] font-mono">LOCK</span>
+</div>
+<div class="flex items-baseline gap-2 my-1">
+<span class="text-2xl lg:text-3xl font-bold font-mono text-white">Field A</span>
+</div>
+<p class="text-xs text-slate-400 mt-1">Sector Grid Coordinates Assigned</p>
+<div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] font-mono text-slate-400 flex justify-between">
+<span>Lat: 28.4592° N</span>
+<span>Lon: 77.0266° E</span>
+</div>
+</div>
+<!-- IMU Card -->
+<div class="glass-card p-5 rounded-xl border-[#23283b] relative">
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs font-mono uppercase text-slate-300 font-semibold tracking-wider">IMU INERTIAL UNIT</span>
+<span class="px-2 py-0.5 rounded bg-emerald-950 text-status-normal border border-emerald-800 text-[10px] font-mono">NORMAL</span>
+</div>
+<div class="flex items-baseline gap-2 my-1">
+<span class="text-2xl lg:text-3xl font-bold font-mono text-status-normal">Stable</span>
+</div>
+<p class="text-xs text-slate-400 mt-1">Pitch: 0.2° | Roll: -0.1° | Yaw: 182°</p>
+<div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] font-mono text-slate-400 flex justify-between">
+<span>Vibration: Nominal</span>
+<span>G-Load: 1.01 G</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 2-Column Split: Crop Analysis & Interactive 3D Crop Field Preview -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- Crop Analysis Section (DOMINANT 35 cm) -->
+<div class="lg:col-span-5 space-y-4">
+<div class="glass-card p-5 rounded-xl border-violet-500/30">
+<div class="flex items-center justify-between pb-3 border-b border-slate-800">
+<h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">CROP ANALYSIS</h3>
+<span class="px-2.5 py-0.5 rounded bg-status-normal/15 text-status-normal border border-status-normal/30 text-xs font-mono font-semibold" id="crop-growth-badge">
+                  NORMAL
+                </span>
+</div>
+<!-- Dominate 35 cm Average Crop Height -->
+<div class="py-4">
+<span class="text-xs uppercase font-mono text-slate-400 block mb-1">AVERAGE CROP HEIGHT</span>
+<div class="flex items-baseline gap-3">
+<span class="text-5xl lg:text-6xl font-black font-mono tracking-tight text-white" id="crop-avg-height">35</span>
+<span class="text-xl font-mono text-violet-400 font-bold">cm</span>
+</div>
+<div class="flex items-center gap-2 mt-2 text-xs font-mono text-slate-400">
+<span>Target Range: 30–37 cm</span>
+<span>•</span>
+<span>Canopy Density: 94%</span>
+</div>
+</div>
+<!-- Analysis Summary Grid -->
+<div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800 text-xs font-mono">
+<div class="bg-[#10131d] p-3 rounded-lg border border-[#23283b]">
+<span class="text-[10px] text-slate-400 block">SECTORS SCANNED</span>
+<span class="text-base font-bold text-white mt-0.5 block">4 / 4</span>
+</div>
+<div class="bg-[#10131d] p-3 rounded-lg border border-[#23283b]">
+<span class="text-[10px] text-slate-400 block">FIELD CONDITION</span>
+<span class="text-base font-bold text-status-normal mt-0.5 block" id="field-cond-text">SUITABLE</span>
+</div>
+</div>
+</div>
+<!-- Field Sectors Overview (A, B, C, D) -->
+<div class="glass-card p-5 rounded-xl border-[#23283b]">
+<div class="flex items-center justify-between mb-3">
+<h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">FIELD SECTORS CANOPY</h4>
+<span class="text-[11px] font-mono text-slate-400">CLICK TO INSPECT</span>
+</div>
+<div class="grid grid-cols-2 gap-2.5 font-mono">
+<!-- Sector A -->
+<button class="p-3 rounded-lg bg-[#10131d] border border-[#23283b] hover:border-violet-500 text-left transition group" onclick="inspectSector('A')">
+<div class="flex justify-between text-xs mb-1">
+<span class="font-bold text-slate-200">SECTOR A</span>
+<span class="text-status-normal text-[10px] font-bold">NORMAL</span>
+</div>
+<div class="text-base font-bold text-slate-100">35 <span class="text-xs text-slate-400 font-normal">cm</span></div>
+<span class="text-[10px] text-slate-400 block mt-1">Canopy Uniform</span>
+</button>
+<!-- Sector B -->
+<button class="p-3 rounded-lg bg-[#10131d] border border-[#23283b] hover:border-violet-500 text-left transition group" id="sec-card-b" onclick="inspectSector('B')">
+<div class="flex justify-between text-xs mb-1">
+<span class="font-bold text-slate-200">SECTOR B</span>
+<span class="text-status-normal text-[10px] font-bold" id="sec-b-badge">NORMAL</span>
+</div>
+<div class="text-base font-bold text-slate-100" id="sec-b-val">34 <span class="text-xs text-slate-400 font-normal">cm</span></div>
+<span class="text-[10px] text-slate-400 block mt-1" id="sec-b-sub">Canopy Uniform</span>
+</button>
+<!-- Sector C -->
+<button class="p-3 rounded-lg bg-[#10131d] border border-[#23283b] hover:border-violet-500 text-left transition group" onclick="inspectSector('C')">
+<div class="flex justify-between text-xs mb-1">
+<span class="font-bold text-slate-200">SECTOR C</span>
+<span class="text-status-normal text-[10px] font-bold">NORMAL</span>
+</div>
+<div class="text-base font-bold text-slate-100">36 <span class="text-xs text-slate-400 font-normal">cm</span></div>
+<span class="text-[10px] text-slate-400 block mt-1">Canopy Uniform</span>
+</button>
+<!-- Sector D -->
+<button class="p-3 rounded-lg bg-[#10131d] border border-[#23283b] hover:border-violet-500 text-left transition group" onclick="inspectSector('D')">
+<div class="flex justify-between text-xs mb-1">
+<span class="font-bold text-slate-200">SECTOR D</span>
+<span class="text-status-normal text-[10px] font-bold">NORMAL</span>
+</div>
+<div class="text-base font-bold text-slate-100">35 <span class="text-xs text-slate-400 font-normal">cm</span></div>
+<span class="text-[10px] text-slate-400 block mt-1">Canopy Uniform</span>
+</button>
+</div>
+</div>
+<!-- Problem Explanation Card (Appears dynamically or when Problem Demo is active) -->
+<div class="hidden glass-card p-5 rounded-xl border-amber-500/50 glow-amber" id="problem-detail-card">
+<div class="flex items-center gap-2 mb-2">
+<span class="px-2 py-0.5 rounded bg-amber-500 text-black font-bold text-[10px] font-mono">ATTENTION REQUIRED</span>
+<span class="text-xs font-bold font-mono text-amber-300">LOW CROP GROWTH</span>
+</div>
+<div class="space-y-2 text-xs font-mono mt-3">
+<div class="flex justify-between border-b border-slate-800/80 pb-1.5">
+<span class="text-slate-400">WHERE:</span>
+<span class="text-white font-bold">Sector B — Row 4</span>
+</div>
+<div class="flex justify-between border-b border-slate-800/80 pb-1.5">
+<span class="text-slate-400">MEASURED HEIGHT:</span>
+<span class="text-amber-400 font-bold">21 cm</span>
+</div>
+<div class="flex justify-between border-b border-slate-800/80 pb-1.5">
+<span class="text-slate-400">FIELD AVERAGE:</span>
+<span class="text-slate-200 font-bold">35 cm</span>
+</div>
+<div class="flex justify-between border-b border-slate-800/80 pb-1.5">
+<span class="text-slate-400">SEVERITY:</span>
+<span class="text-amber-400 font-bold">MODERATE</span>
+</div>
+</div>
+<div class="bg-[#0b0d13] p-3 rounded-lg border border-amber-950/80 mt-3">
+<span class="text-[10px] font-mono text-slate-400 uppercase block mb-1">EXPLANATION</span>
+<p class="text-xs text-slate-300 leading-relaxed font-sans">
+                  "Crop height in this area is below the measured field average."
+                </p>
+<span class="text-[10px] font-mono text-slate-400 uppercase block mt-2 mb-0.5">RECOMMENDED ACTION</span>
+<p class="text-xs text-amber-200 font-semibold font-sans">
+                  "Inspect Sector B, Row 4."
+                </p>
+</div>
+<button class="w-full mt-3 bg-amber-600 hover:bg-amber-500 text-black font-bold text-xs py-2 rounded-lg font-mono transition flex items-center justify-center gap-1.5" onclick="focusOnAffectedArea()">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>VIEW ON 3D FIELD</span>
+</button>
+</div>
+</div>
+<!-- Embedded 3D Scene Viewer in Dashboard (Showing Drone, LiDAR, Crop Rows & Sectors) -->
+<div class="lg:col-span-7 space-y-3">
+<div class="glass-card p-4 rounded-xl border-[#23283b] overflow-hidden">
+<div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-violet-400 animate-pulse"></span>
+<span class="text-xs font-mono font-bold text-slate-200 uppercase">3D TELEMETRY SCENE: AGRI-01 OVER FIELD A</span>
+</div>
+<div class="flex items-center gap-2 text-xs font-mono">
+<button class="px-2 py-1 rounded bg-[#161a27] hover:bg-slate-700 text-slate-300 text-[10px] transition" onclick="window.AEROAGRI_SIM.resetToIdle()">
+                    RESET VIEW
+                  </button>
+<button class="text-violet-400 hover:text-violet-300 text-[11px] underline" onclick="switchTab('field-scan')">
+                    Full Scan View →
+                  </button>
+</div>
+</div>
+<!-- Telemetry Overlay Note -->
+<div class="relative w-full h-[420px] rounded-lg bg-[#07080b] border border-slate-800/80 overflow-hidden group">
+<!-- Live Scene Guidance Overlay -->
+<div class="absolute top-3 left-3 z-20 pointer-events-none space-y-1">
+<div class="px-2.5 py-1 rounded bg-black/70 backdrop-blur border border-slate-800 text-[10px] font-mono text-slate-300">
+                    OPTICAL AXIS: <strong>DOWNWARD NADIR</strong>
+</div>
+<div class="px-2.5 py-1 rounded bg-violet-950/80 backdrop-blur border border-violet-700/50 text-[10px] font-mono text-violet-300" id="scene-active-sector-tag">
+                    SCAN BEAM: <strong>ACTIVE / 42 cm CANOPY</strong>
+</div>
+</div>
+<!-- Scene Interactive Hint -->
+<div class="absolute bottom-3 right-3 z-20 pointer-events-none px-2 py-1 rounded bg-black/60 text-[10px] font-mono text-slate-400">
+                  Drag / move mouse to inspect parallax
+                </div>
+<!-- Note: The global 3D container will be positioned here when in Dashboard tab -->
+<div class="w-full h-full relative" id="dashboard-canvas-portal">
+<!-- The 3D scene elements render continuously -->
+</div>
+</div>
+<div class="grid grid-cols-4 gap-2 mt-3 text-center text-[10px] font-mono text-slate-400">
+<div class="p-2 rounded bg-[#0e111a]">Sector A (NW)</div>
+<div class="p-2 rounded bg-[#0e111a]">Sector B (NE)</div>
+<div class="p-2 rounded bg-[#0e111a]">Sector C (SW)</div>
+<div class="p-2 rounded bg-[#0e111a]">Sector D (SE)</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ===================================================================== -->
+<!-- TAB 2: FIELD SCAN (DEDICATED FULL FIELD SCAN VIEW)                    -->
+<!-- ===================================================================== -->
+<div class="hidden p-4 md:p-6 lg:p-8 space-y-6" id="tab-field-scan">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
+<div>
+<h2 class="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              FIELD SCAN — FIELD A
+              <span class="text-xs font-mono font-normal px-2 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-800">
+                LIDAR CANOPY MAPPING
+              </span>
+</h2>
+<p class="text-xs text-slate-400 mt-0.5">
+              Live automated microdrone trajectory over 8 parallel agricultural crop rows and 4 management sectors.
+            </p>
+</div>
+<button class="bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-lg shadow-violet-900/30 transition" id="start-scan-btn-scanview" onclick="triggerFullScanWorkflow()">
+<span>START FIELD SCAN</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+<!-- Scan Progress Monitor Bar (Requirement 18 & 19) -->
+<div class="glass-card p-4 rounded-xl border-[#23283b] space-y-3">
+<div class="flex items-center justify-between text-xs font-mono">
+<div class="flex items-center gap-2">
+<span class="text-slate-400">FLIGHT STAGE:</span>
+<span class="text-violet-300 font-bold px-2 py-0.5 rounded bg-violet-950 border border-violet-800" id="scan-stage-label">
+                READY
+              </span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-slate-400">PROGRESS:</span>
+<span class="text-base font-bold text-white" id="scan-pct-label">0%</span>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="w-full bg-[#121522] h-2.5 rounded-full overflow-hidden border border-slate-800">
+<div class="h-full bg-gradient-to-r from-violet-600 via-violet-400 to-status-normal w-0 transition-all duration-150" id="scan-progress-bar"></div>
+</div>
+<!-- Workflow Steps Chain -->
+<div class="grid grid-cols-7 gap-1 text-center font-mono text-[9px] sm:text-[10px] text-slate-400 pt-1">
+<div class="py-1 rounded bg-violet-950/60 text-violet-300 border border-violet-700/50" id="step-0">READY</div>
+<div class="py-1 rounded bg-[#10121a]" id="step-1">TAKING OFF</div>
+<div class="py-1 rounded bg-[#10121a]" id="step-2">FLYING</div>
+<div class="py-1 rounded bg-[#10121a]" id="step-3">SCANNING</div>
+<div class="py-1 rounded bg-[#10121a]" id="step-4">PROCESSING</div>
+<div class="py-1 rounded bg-[#10121a]" id="step-5">ANALYZING</div>
+<div class="py-1 rounded bg-[#10121a]" id="step-6">RESULT</div>
+</div>
+</div>
+<!-- 3D Field Large Display -->
+<div class="glass-card p-4 rounded-xl border-[#23283b] relative">
+<div class="w-full h-[540px] rounded-lg bg-[#07080b] border border-slate-800 relative overflow-hidden" id="fieldscan-canvas-portal">
+<!-- 3D Drone & Field renders here -->
+</div>
+<!-- Telemetry Floating Dock on Scan View -->
+<div class="absolute bottom-8 left-8 right-8 glass-card p-3 rounded-lg border-violet-500/30 flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-6 font-mono text-xs">
+<div>
+<span class="text-[10px] text-slate-400 block">CURRENT BEAM TARGET</span>
+<span class="font-bold text-white" id="scan-dock-sector">Sector A</span>
+</div>
+<div>
+<span class="text-[10px] text-slate-400 block">MEASURED CANOPY</span>
+<span class="font-bold text-violet-300" id="scan-dock-height">42 cm</span>
+</div>
+<div>
+<span class="text-[10px] text-slate-400 block">POINT CLOUD SAMPLES</span>
+<span class="font-bold text-slate-200" id="scan-dock-samples">1,280 pts/sec</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 text-xs font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300" onclick="inspectSector('A')">Sector A</button>
+<button class="px-2.5 py-1 text-xs font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300" onclick="inspectSector('B')">Sector B</button>
+<button class="px-2.5 py-1 text-xs font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300" onclick="inspectSector('C')">Sector C</button>
+<button class="px-2.5 py-1 text-xs font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300" onclick="inspectSector('D')">Sector D</button>
+</div>
+</div>
+</div>
+</div>
+<!-- ===================================================================== -->
+<!-- TAB 3: SENSOR DATA (REQUIREMENT 23)                                    -->
+<!-- ===================================================================== -->
+<div class="hidden p-4 md:p-6 lg:p-8 space-y-6" id="tab-sensor-data">
+<div class="pb-2 border-b border-slate-800">
+<h2 class="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            SENSOR DATA &amp; TELEMETRY STREAM
+          </h2>
+<p class="text-xs text-slate-400 mt-0.5">
+            Calibrated sensor instrumentation aboard microdrone AGRI-01.
+          </p>
+</div>
+<!-- Sensor Array Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+<div class="glass-card p-5 rounded-xl border-violet-500/40">
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-mono uppercase text-violet-400 font-bold">LiDAR SUBSYSTEM</span>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-800">CALIBRATED</span>
+</div>
+<div class="text-3xl font-extrabold font-mono text-white mt-2" id="sd-lidar-val">42 cm</div>
+<p class="text-xs text-slate-400 mt-1" id="sd-lidar-sub">Optical Ground-to-Canopy Ranging</p>
+<div class="mt-4 space-y-1.5 text-xs font-mono text-slate-300 border-t border-slate-800 pt-3">
+<div class="flex justify-between"><span class="text-slate-500">Sensor Status:</span><span class="text-status-normal">Stable</span></div>
+<div class="flex justify-between"><span class="text-slate-500">Noise StdDev:</span><span>±0.2 cm</span></div>
+<div class="flex justify-between"><span class="text-slate-500">Pulse Frequency:</span><span>10 kHz</span></div>
+</div>
+</div>
+<div class="glass-card p-5 rounded-xl border-[#23283b]">
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-mono uppercase text-slate-300 font-bold">GPS RECEIVER</span>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-status-normal border border-emerald-800">RTK-FIX</span>
+</div>
+<div class="text-3xl font-bold font-mono text-white mt-2">Field A</div>
+<p class="text-xs text-slate-400 mt-1" id="sd-gps-sub">Geographic Field Anchor</p>
+<div class="mt-4 space-y-1.5 text-xs font-mono text-slate-300 border-t border-slate-800 pt-3">
+<div class="flex justify-between"><span class="text-slate-500">Fix Quality:</span><span class="text-status-normal">Stable</span></div>
+<div class="flex justify-between"><span class="text-slate-500">SVs Locked:</span><span>18 Satellites</span></div>
+<div class="flex justify-between"><span class="text-slate-500">HDOP:</span><span>0.78</span></div>
+</div>
+</div>
+<div class="glass-card p-5 rounded-xl border-[#23283b]">
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-mono uppercase text-slate-300 font-bold">IMU 6-DOF</span>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-status-normal border border-emerald-800">ALIGNED</span>
+</div>
+<div class="text-3xl font-bold font-mono text-status-normal mt-2" id="sd-imu-val">Stable</div>
+<p class="text-xs text-slate-400 mt-1" id="sd-imu-sub">Attitude &amp; Heading Reference</p>
+<div class="mt-4 space-y-1.5 text-xs font-mono text-slate-300 border-t border-slate-800 pt-3">
+<div class="flex justify-between"><span class="text-slate-500">Orientation:</span><span>Normal</span></div>
+<div class="flex justify-between"><span class="text-slate-500">Angular Drift:</span><span>&lt; 0.01°/s</span></div>
+<div class="flex justify-between"><span class="text-slate-500">Gyro Temp:</span><span>34.2°C</span></div>
+</div>
+</div>
+</div>
+<!-- Secondary Readout Strip -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+<div class="glass-card p-4 rounded-xl text-center">
+<span class="text-[10px] font-mono text-slate-400 block">SCAN ALTITUDE</span>
+<span class="text-xl font-bold font-mono text-slate-100 mt-1 block">18.4 m</span>
+</div>
+<div class="glass-card p-4 rounded-xl text-center">
+<span class="text-[10px] font-mono text-slate-400 block">SCAN COVERAGE</span>
+<span class="text-xl font-bold font-mono text-violet-400 mt-1 block">68%</span>
+</div>
+<div class="glass-card p-4 rounded-xl text-center">
+<span class="text-[10px] font-mono text-slate-400 block">BATTERY</span>
+<span class="text-xl font-bold font-mono text-status-normal mt-1 block">100%</span>
+</div>
+<div class="glass-card p-4 rounded-xl text-center">
+<span class="text-[10px] font-mono text-slate-400 block">SIGNAL STRENGTH</span>
+<span class="text-xl font-bold font-mono text-slate-100 mt-1 block">98%</span>
+</div>
+</div>
+<!-- Telemetry Reading History Log -->
+<div class="glass-card p-5 rounded-xl border-[#23283b]">
+<h3 class="text-xs font-bold font-mono text-slate-200 uppercase mb-3">Live Sensor Reading History (Recent Samples)</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-xs font-mono text-left">
+<thead>
+<tr class="border-b border-slate-800 text-slate-400">
+<th class="py-2 px-3">TIMESTAMP</th>
+<th class="py-2 px-3">SECTOR</th>
+<th class="py-2 px-3">LIDAR READOUT</th>
+<th class="py-2 px-3">CROP HEIGHT</th>
+<th class="py-2 px-3">IMU STATE</th>
+<th class="py-2 px-3">SIGNAL</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-800/60 text-slate-300" id="telemetry-log-tbody">
+<tr>
+<td class="py-2 px-3">14:32:45.1</td>
+<td class="py-2 px-3">Sector A</td>
+<td class="py-2 px-3 text-violet-400 font-bold">42.1 cm</td>
+<td class="py-2 px-3">35.2 cm</td>
+<td class="py-2 px-3 text-status-normal">Stable</td>
+<td class="py-2 px-3">98%</td>
+</tr>
+<tr>
+<td class="py-2 px-3">14:32:44.2</td>
+<td class="py-2 px-3">Sector A</td>
+<td class="py-2 px-3 text-violet-400 font-bold">41.8 cm</td>
+<td class="py-2 px-3">35.0 cm</td>
+<td class="py-2 px-3 text-status-normal">Stable</td>
+<td class="py-2 px-3">98%</td>
+</tr>
+<tr>
+<td class="py-2 px-3">14:32:43.0</td>
+<td class="py-2 px-3">Sector B</td>
+<td class="py-2 px-3 text-violet-400 font-bold">42.4 cm</td>
+<td class="py-2 px-3">34.4 cm</td>
+<td class="py-2 px-3 text-status-normal">Stable</td>
+<td class="py-2 px-3">97%</td>
+</tr>
+<tr>
+<td class="py-2 px-3">14:32:41.8</td>
+<td class="py-2 px-3">Sector C</td>
+<td class="py-2 px-3 text-violet-400 font-bold">42.0 cm</td>
+<td class="py-2 px-3">36.1 cm</td>
+<td class="py-2 px-3 text-status-normal">Stable</td>
+<td class="py-2 px-3">99%</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- ===================================================================== -->
+<!-- TAB 4: RESULTS (REQUIREMENT 22)                                       -->
+<!-- ===================================================================== -->
+<div class="hidden p-4 md:p-6 lg:p-8 space-y-6" id="tab-results">
+<div class="pb-2 border-b border-slate-800 flex justify-between items-center">
+<div>
+<h2 class="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              SCAN RESULTS — FIELD A
+            </h2>
+<p class="text-xs text-slate-400 mt-0.5">
+              Comprehensive agricultural crop canopy synthesis and anomaly determination.
+            </p>
+</div>
+<button class="text-xs font-mono text-violet-400 hover:text-violet-300" onclick="triggerFullScanWorkflow()">
+            Run Fresh Scan →
+          </button>
+</div>
+<!-- Clean Results Panel: Displays either Healthy or Problem Result (Requirement 22) -->
+<div class="glass-card p-6 rounded-xl border-emerald-500/40 glow-green space-y-5" id="results-panel-healthy">
+<div class="flex items-center justify-between border-b border-slate-800 pb-4">
+<div>
+<span class="text-xs font-mono text-slate-400 uppercase">MISSION STATUS</span>
+<h3 class="text-2xl font-bold text-white font-mono">SCAN COMPLETE</h3>
+</div>
+<div class="text-right">
+<span class="text-xs font-mono text-slate-400 block">OVERALL STATUS</span>
+<span class="text-lg font-bold font-mono text-status-normal px-3 py-1 rounded bg-status-normal/10 border border-status-normal/30 inline-block mt-0.5">
+                NORMAL
+              </span>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-xs">
+<div class="bg-[#10131d] p-3 rounded-lg border border-slate-800">
+<span class="text-slate-400 block text-[10px]">CROP HEIGHT</span>
+<span class="text-xl font-bold text-white mt-1 block" id="res-h-height">35 cm</span>
+</div>
+<div class="bg-[#10131d] p-3 rounded-lg border border-slate-800">
+<span class="text-slate-400 block text-[10px]">GROWTH STATUS</span>
+<span class="text-xl font-bold text-status-normal mt-1 block">NORMAL</span>
+</div>
+<div class="bg-[#10131d] p-3 rounded-lg border border-slate-800">
+<span class="text-slate-400 block text-[10px]">TEMPERATURE</span>
+<span class="text-xl font-bold text-slate-200 mt-1 block">28°C</span>
+</div>
+<div class="bg-[#10131d] p-3 rounded-lg border border-slate-800">
+<span class="text-slate-400 block text-[10px]">SEASON</span>
+<span class="text-xl font-bold text-violet-300 mt-1 block">KHARIF</span>
+</div>
+</div>
+<div class="p-4 rounded-lg bg-[#0e111a] border border-slate-800">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-normal"></span>
+<span class="text-xs font-mono font-bold text-white">ISSUES: NONE DETECTED</span>
+</div>
+<span class="text-xs font-mono text-slate-400">All 4 sectors within nominal growth parameters (30–37 cm).</span>
+</div>
+</div>
+<div class="pt-3 border-t border-slate-800 flex justify-between items-center text-xs font-mono text-slate-400">
+<span id="res-h-summary">SENSOR SUMMARY: LiDAR — 42 cm  |  GPS — Field A  |  IMU — Stable</span>
+<span class="text-slate-500">SIMULATION ENGINE v2.4</span>
+</div>
+</div>
+<!-- Problem Result Panel (Requirement 22) -->
+<div class="hidden glass-card p-6 rounded-xl border-amber-500/50 glow-amber space-y-5" id="results-panel-problem">
+<div class="flex items-center justify-between border-b border-slate-800 pb-4">
+<div>
+<span class="text-xs font-mono text-slate-400 uppercase">MISSION STATUS</span>
+<h3 class="text-2xl font-bold text-white font-mono">SCAN COMPLETE</h3>
+</div>
+<div class="text-right">
+<span class="text-xs font-mono text-slate-400 block">OVERALL STATUS</span>
+<span class="text-lg font-bold font-mono text-amber-400 px-3 py-1 rounded bg-amber-950/60 border border-amber-500/40 inline-block mt-0.5">
+                ATTENTION REQUIRED
+              </span>
+</div>
+</div>
+<div class="p-4 rounded-lg bg-amber-950/30 border border-amber-600/40 space-y-3 font-mono text-xs">
+<div class="flex items-center justify-between border-b border-amber-800/40 pb-2">
+<span class="text-amber-300 font-bold">ISSUES DETECTED: 1</span>
+<span class="px-2 py-0.5 rounded bg-amber-500 text-black font-bold text-[10px]">LOW CROP GROWTH</span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+<div>
+<span class="text-slate-400 block text-[10px]">LOCATION</span>
+<span class="text-sm font-bold text-white" id="res-p-loc">Sector B — Row 4</span>
+</div>
+<div>
+<span class="text-slate-400 block text-[10px]">CROP HEIGHT</span>
+<span class="text-sm font-bold text-amber-400" id="res-p-height">21 cm</span>
+</div>
+<div>
+<span class="text-slate-400 block text-[10px]">FIELD AVERAGE</span>
+<span class="text-sm font-bold text-slate-200" id="res-p-avg">35 cm</span>
+</div>
+<div>
+<span class="text-slate-400 block text-[10px]">SEVERITY</span>
+<span class="text-sm font-bold text-amber-400">MODERATE</span>
+</div>
+</div>
+<div class="pt-2 border-t border-amber-800/40 space-y-1">
+<p class="text-slate-300 font-sans text-xs" id="res-p-expl">
+<strong>EXPLANATION:</strong> Crop height in this area is below the measured field average.
+              </p>
+<p class="text-amber-200 font-sans text-xs">
+<strong>ACTION:</strong> Inspect Sector B, Row 4.
+              </p>
+</div>
+</div>
+<div class="flex justify-between items-center pt-2">
+<button class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-black font-mono font-bold text-xs transition" onclick="focusOnAffectedArea()">
+              VIEW AFFECTED AREA ON 3D FIELD
+            </button>
+<span class="text-xs font-mono text-slate-500" id="res-p-summary">LiDAR 42 cm • GPS Field A • IMU Stable</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- ========================================================================= -->
+<!-- 3. INTERACTIVE LOGIC & CONTROLLERS                                       -->
+<!-- ========================================================================= -->
+<script>
+    // State Tracker
+    const AppState = {
+      isLoggedIn: false,
+      currentTab: 'dashboard',
+      demoMode: 'healthy', // 'healthy' or 'problem'
+      isScanning: false
+    };
+
+    // 1. Password Visibility Toggle (Requirement 2)
+    function togglePasswordVisibility() {
+      const pwdInput = document.getElementById('login-password');
+      const openIcon = document.getElementById('eye-icon-open');
+      const closedIcon = document.getElementById('eye-icon-closed');
+
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        openIcon.classList.remove('hidden');
+        closedIcon.classList.add('hidden');
+      } else {
+        pwdInput.type = 'password';
+        openIcon.classList.add('hidden');
+        closedIcon.classList.remove('hidden');
+      }
+    }
+
+    // 2. Login Action -> Direct Transition to Dashboard (Requirement 2)
+    function handleLoginSubmit(event) {
+      event.preventDefault();
+      const loginView = document.getElementById('login-view');
+      const appWorkspace = document.getElementById('app-workspace');
+      const container = document.getElementById('threejs-drone-field-container');
+      const dashPortal = document.getElementById('dashboard-canvas-portal');
+
+      // Short smooth transition
+      loginView.style.opacity = '0';
+      setTimeout(() => {
+        loginView.classList.add('hidden');
+        appWorkspace.classList.remove('hidden');
+        AppState.isLoggedIn = true;
+
+        // Reparent 3D canvas to the Dashboard viewer container
+        if (dashPortal && container) {
+          dashPortal.appendChild(container);
+          window.dispatchEvent(new Event('resize'));
+        }
+      }, 350);
+    }
+
+    // 3. Prominent Sign Out Function (Requirement 7 & 26)
+    function handleSignOut() {
+      const loginView = document.getElementById('login-view');
+      const appWorkspace = document.getElementById('app-workspace');
+      const container = document.getElementById('threejs-drone-field-container');
+
+      // Clear state
+      AppState.isLoggedIn = false;
+      if (window.AEROAGRI_SIM) {
+        window.AEROAGRI_SIM.resetToIdle();
+      }
+
+      // Reparent 3D canvas back to Login Hero
+      const loginRight = document.querySelector('#login-view > div:last-child');
+      if (loginRight && container) {
+        loginRight.prepend(container);
+        window.dispatchEvent(new Event('resize'));
+      }
+
+      appWorkspace.classList.add('hidden');
+      loginView.classList.remove('hidden');
+      loginView.style.opacity = '1';
+    }
+
+    // 4. Tab Navigation Switching
+    function switchTab(tabId) {
+      AppState.currentTab = tabId;
+      const tabs = ['dashboard', 'field-scan', 'sensor-data', 'results'];
+      
+      tabs.forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tabId) {
+          el.classList.remove('hidden');
+          btn.className = 'px-3.5 py-1.5 rounded-md bg-violet-600/20 border border-violet-500 text-violet-200 font-medium transition';
+        } else {
+          el.classList.add('hidden');
+          btn.className = 'px-3.5 py-1.5 rounded-md hover:bg-slate-800/60 border border-transparent text-slate-400 hover:text-slate-200 transition';
+        }
+      });
+
+      // Handle 3D Canvas portal destination between Dashboard and Field Scan
+      const container = document.getElementById('threejs-drone-field-container');
+      if (tabId === 'dashboard') {
+        const dashPortal = document.getElementById('dashboard-canvas-portal');
+        if (dashPortal && container) dashPortal.appendChild(container);
+      } else if (tabId === 'field-scan') {
+        const scanPortal = document.getElementById('fieldscan-canvas-portal');
+        if (scanPortal && container) scanPortal.appendChild(container);
+      }
+      window.dispatchEvent(new Event('resize'));
+    }
+
+    // 5. Problem Demo vs Healthy Demo States (Requirement 15, 16, 22)
+    function setDemoState(mode) {
+      AppState.demoMode = mode;
+      const healthyBtn = document.getElementById('btn-demo-healthy');
+      const problemBtn = document.getElementById('btn-demo-problem');
+      const problemBanner = document.getElementById('problem-alert-banner');
+      const problemCard = document.getElementById('problem-detail-card');
+      const secBCard = document.getElementById('sec-card-b');
+      const secBBadge = document.getElementById('sec-b-badge');
+      const secBVal = document.getElementById('sec-b-val');
+      const secBSub = document.getElementById('sec-b-sub');
+      const cropBadge = document.getElementById('crop-growth-badge');
+      const cropHeight = document.getElementById('crop-avg-height');
+      const fieldCond = document.getElementById('field-cond-text');
+      const resHealthy = document.getElementById('results-panel-healthy');
+      const resProblem = document.getElementById('results-panel-problem');
+
+      if (mode === 'problem') {
+        healthyBtn.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition';
+        problemBtn.className = 'px-2.5 py-1 rounded bg-amber-500 text-black font-bold transition';
+
+        problemBanner.classList.remove('hidden');
+        problemCard.classList.remove('hidden');
+
+        // Sector B Stunted Updates
+        secBCard.classList.add('border-amber-500', 'bg-amber-950/20');
+        secBBadge.innerText = 'ATTENTION';
+        secBBadge.className = 'text-amber-400 text-[10px] font-bold';
+        secBVal.innerHTML = '21 <span class="text-xs text-slate-400 font-normal">cm</span>';
+        secBSub.innerText = 'Row 4 Stunted Growth';
+
+        cropBadge.innerText = 'ATTENTION REQUIRED';
+        cropBadge.className = 'px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-mono font-semibold';
+        fieldCond.innerText = 'INSPECTION REQ.';
+        fieldCond.className = 'text-base font-bold text-amber-400 mt-0.5 block';
+
+        // Results tabs panel
+        resHealthy.classList.add('hidden');
+        resProblem.classList.remove('hidden');
+
+        // Notify 3D engine
+        if (window.AEROAGRI_SIM) {
+          window.AEROAGRI_SIM.setDemoMode('problem');
+        }
+      } else {
+        healthyBtn.className = 'px-2.5 py-1 rounded bg-violet-600 text-white font-medium transition';
+        problemBtn.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-amber-300 transition';
+
+        problemBanner.classList.add('hidden');
+        problemCard.classList.add('hidden');
+
+        // Sector B Normal Updates
+        secBCard.classList.remove('border-amber-500', 'bg-amber-950/20');
+        secBBadge.innerText = 'NORMAL';
+        secBBadge.className = 'text-status-normal text-[10px] font-bold';
+        secBVal.innerHTML = '34 <span class="text-xs text-slate-400 font-normal">cm</span>';
+        secBSub.innerText = 'Canopy Uniform';
+
+        cropBadge.innerText = 'NORMAL';
+        cropBadge.className = 'px-2.5 py-0.5 rounded bg-status-normal/15 text-status-normal border border-status-normal/30 text-xs font-mono font-semibold';
+        cropHeight.innerText = '35';
+        fieldCond.innerText = 'SUITABLE';
+        fieldCond.className = 'text-base font-bold text-status-normal mt-0.5 block';
+
+        // Results tabs panel
+        resHealthy.classList.remove('hidden');
+        resProblem.classList.add('hidden');
+
+        // Notify 3D engine
+        if (window.AEROAGRI_SIM) {
+          window.AEROAGRI_SIM.setDemoMode('healthy');
+        }
+      }
+    }
+
+    // 6. Focus on Sector B Affected Area
+    function focusOnAffectedArea() {
+      switchTab('dashboard');
+      if (window.AEROAGRI_SIM) {
+        window.AEROAGRI_SIM.focusOnSector('B');
+      }
+      const problemCard = document.getElementById('problem-detail-card');
+      if (problemCard) {
+        problemCard.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    // 7. Inspect Specific Sector
+    function inspectSector(secKey) {
+      if (window.AEROAGRI_SIM) {
+        window.AEROAGRI_SIM.focusOnSector(secKey);
+      }
+      const tag = document.getElementById('scene-active-sector-tag');
+      if (tag) {
+        tag.innerHTML = `TARGET: <strong>SECTOR ${secKey}</strong>`;
+      }
+    }
+
+    // 8. Start Field Scan Sequence (Requirements 18, 19, 20, 21)
+    function triggerFullScanWorkflow() {
+      if (AppState.isScanning) return;
+      AppState.isScanning = true;
+
+      // Switch to Field Scan tab so user experiences the full LiDAR beam animation
+      switchTab('field-scan');
+
+      const progressBar = document.getElementById('scan-progress-bar');
+      const pctLabel = document.getElementById('scan-pct-label');
+      const stageLabel = document.getElementById('scan-stage-label');
+      const droneStatus = document.getElementById('drone-status-text');
+      const dockSector = document.getElementById('scan-dock-sector');
+      const dockHeight = document.getElementById('scan-dock-height');
+
+      const steps = ['READY', 'TAKING OFF', 'FLYING', 'SCANNING', 'PROCESSING', 'ANALYZING', 'RESULT'];
+
+      if (droneStatus) {
+        droneStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-violet-400 animate-ping"></span> Scanning Canopy`;
+      }
+
+      if (window.AEROAGRI_SIM) {
+        window.AEROAGRI_SIM.startScanSequence(
+          // onProgress
+          (pct) => {
+            if (progressBar) progressBar.style.width = pct + '%';
+            if (pctLabel) pctLabel.innerText = pct + '%';
+
+            // Update dock numbers dynamically
+            if (pct < 25) {
+              if (dockSector) dockSector.innerText = 'Sector A';
+              if (dockHeight) dockHeight.innerText = '42.1 cm';
+            } else if (pct < 50) {
+              if (dockSector) dockSector.innerText = 'Sector B';
+              if (dockHeight) dockHeight.innerText = AppState.demoMode === 'problem' ? '21.0 cm (Stunted)' : '42.4 cm';
+            } else if (pct < 75) {
+              if (dockSector) dockSector.innerText = 'Sector D';
+              if (dockHeight) dockHeight.innerText = '41.9 cm';
+            } else {
+              if (dockSector) dockSector.innerText = 'Sector C';
+              if (dockHeight) dockHeight.innerText = '42.3 cm';
+            }
+          },
+          // onStep
+          (stepName) => {
+            if (stageLabel) stageLabel.innerText = stepName;
+            steps.forEach((s, idx) => {
+              const stepEl = document.getElementById(`step-${idx}`);
+              if (stepEl) {
+                if (s === stepName) {
+                  stepEl.className = 'py-1 rounded bg-violet-600 text-white font-bold border border-violet-400 shadow';
+                } else {
+                  stepEl.className = 'py-1 rounded bg-[#10121a] text-slate-500';
+                }
+              }
+            });
+          },
+          // onComplete
+          (mode) => {
+            AppState.isScanning = false;
+            if (droneStatus) {
+              droneStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-status-normal animate-pulse"></span> Hovering / Idle`;
+            }
+            // Transition smoothly to Results Tab
+            setTimeout(() => {
+              switchTab('results');
+            }, 700);
+          }
+        );
+      }
+    }
+
+    // Attach 3D code directly from the saved animation asset
+  </script>
+<!-- Embed Three.js 3D Microdrone & Crop Canopy Simulation -->
+<!-- STITCH_THREEJS_START:ANIMATION_2 class="hidden" -->
+<div class="hidden" style="display:block;">
+<script src="https://ajax.googleapis.com/ajax/libs/threejs/r125/three.min.js"></script>
+<div id="threejs-container-ANIMATION_2" style="width:100%;height:100%"></div>
+<script>
+(function() {
+  const container = document.getElementById('threejs-container-ANIMATION_2');
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  // Three.js 3D Agricultural Microdrone and Crop Canopy Simulation
+// Global AEROAGRI 3D Simulation Controller attached to window
+(function() {
+  const container = document.getElementById('threejs-drone-field-container') || container;
+  if (!container) return;
+
+  const width = container.clientWidth || window.innerWidth;
+  const height = container.clientHeight || window.innerHeight;
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x090a0f, 0.025);
+
+  const camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 100);
+  camera.position.set(0, 3.6, 6.2);
+  camera.lookAt(0, 0.4, 0);
+
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  container.appendChild(renderer.domElement);
+
+  // Lighting
+  const ambientLight = new THREE.AmbientLight(0x282c3f, 1.4);
+  scene.add(ambientLight);
+
+  const keyLight = new THREE.DirectionalLight(0xdcd6f7, 2.2);
+  keyLight.position.set(5, 10, 7);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.width = 1024;
+  keyLight.shadow.mapSize.height = 1024;
+  scene.add(keyLight);
+
+  const rimVioletLight = new THREE.DirectionalLight(0x8b5cf6, 3.0);
+  rimVioletLight.position.set(-6, 4, -4);
+  scene.add(rimVioletLight);
+
+  const bottomFill = new THREE.DirectionalLight(0x1e293b, 0.8);
+  bottomFill.position.set(0, -5, 0);
+  scene.add(bottomFill);
+
+  // Group for the Entire Scene
+  const worldGroup = new THREE.Group();
+  scene.add(worldGroup);
+
+  // Dark Agricultural Soil Ground with Mounds / Furrows
+  const soilGeo = new THREE.PlaneGeometry(28, 28, 64, 64);
+  const pos = soilGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getY(i);
+    // Subtle agricultural furrows/ridges
+    const ridge = Math.sin(x * 3.8) * 0.045 + (Math.sin(z * 2.1) * 0.02);
+    pos.setZ(i, ridge);
+  }
+  soilGeo.computeVertexNormals();
+
+  const soilMat = new THREE.MeshStandardMaterial({
+    color: 0x0c0d12,
+    roughness: 0.95,
+    metalness: 0.05
+  });
+  const soilMesh = new THREE.Mesh(soilGeo, soilMat);
+  soilMesh.rotation.x = -Math.PI / 2;
+  soilMesh.position.y = -0.55;
+  soilMesh.receiveShadow = true;
+  worldGroup.add(soilMesh);
+
+  // Sub-furrows texture illusion (planting beds lines)
+  const bedGridGeo = new THREE.BufferGeometry();
+  const bedPoints = [];
+  for (let x = -8; x <= 8; x += 1.0) {
+    bedPoints.push(new THREE.Vector3(x, -0.52, -10));
+    bedPoints.push(new THREE.Vector3(x, -0.52, 10));
+  }
+  bedGridGeo.setFromPoints(bedPoints);
+  const bedLineMat = new THREE.LineBasicMaterial({ color: 0x161822, transparent: true, opacity: 0.7 });
+  const bedLines = new THREE.LineSegments(bedGridGeo, bedLineMat);
+  worldGroup.add(bedLines);
+
+  // Crop Generation (Realistic Agricultural Crop Field with individual stalks and foliage)
+  // 4 Main Sectors: A (x: -5 to -0.5, z: -4 to 0), B (x: 0.5 to 5, z: -4 to 0), C (x: -5 to -0.5, z: 0 to 4), D (x: 0.5 to 5, z: 0 to 4)
+  const crops = [];
+  const cropGroup = new THREE.Group();
+  worldGroup.add(cropGroup);
+
+  // Shared Geometries for Leaf and Stems
+  const leafGeo = new THREE.ConeGeometry(0.09, 0.38, 4);
+  leafGeo.translate(0, 0.19, 0);
+
+  const stalkGeo = new THREE.CylinderGeometry(0.015, 0.025, 0.5, 4);
+  stalkGeo.translate(0, 0.25, 0);
+
+  // Natural green/olive agricultural crop materials with subtle violet translucency
+  const healthyFoliageMat = new THREE.MeshLambertMaterial({
+    color: 0x3d7042,
+    emissive: 0x08170c
+  });
+
+  const healthyStalkMat = new THREE.MeshLambertMaterial({
+    color: 0x27492c
+  });
+
+  const attentionFoliageMat = new THREE.MeshLambertMaterial({
+    color: 0x8a7732, // Stunted, yellowish-chlorotic foliage for Sector B problem state
+    emissive: 0x221a05
+  });
+
+  const attentionStalkMat = new THREE.MeshLambertMaterial({
+    color: 0x4f431b
+  });
+
+  // Sector boundaries visually demarcated by very subtle dark dashed bounding ribbons
+  const sectorBoundaries = {};
+  const sectorConfigs = {
+    'A': { minX: -6.2, maxX: -0.6, minZ: -5.5, maxZ: -0.6, centerX: -3.4, centerZ: -3.05, baseHeight: 0.35 },
+    'B': { minX: 0.6, maxX: 6.2, minZ: -5.5, maxZ: -0.6, centerX: 3.4, centerZ: -3.05, baseHeight: 0.34 },
+    'C': { minX: -6.2, maxX: -0.6, minZ: 0.6, maxZ: 5.5, centerX: -3.4, centerZ: 3.05, baseHeight: 0.36 },
+    'D': { minX: 0.6, maxX: 6.2, minZ: 0.6, maxZ: 5.5, centerX: 3.4, centerZ: 3.05, baseHeight: 0.35 }
+  };
+
+  // Generate 8 Parallel Crop Rows
+  const rowXPositions = [-5.2, -3.8, -2.4, -1.0, 1.0, 2.4, 3.8, 5.2];
+  
+  rowXPositions.forEach((rx) => {
+    for (let z = -5.5; z <= 5.5; z += 0.42) {
+      if (Math.abs(z) < 0.5) continue; // Pathway / tractor aisle between front and back sectors
+
+      // Determine which sector this crop belongs to
+      let sectorKey = 'A';
+      if (rx < 0 && z < 0) sectorKey = 'A';
+      else if (rx > 0 && z < 0) sectorKey = 'B';
+      else if (rx < 0 && z > 0) sectorKey = 'C';
+      else sectorKey = 'D';
+
+      const singlePlant = new THREE.Group();
+      const xJitter = (Math.random() - 0.5) * 0.12;
+      const zJitter = (Math.random() - 0.5) * 0.12;
+      singlePlant.position.set(rx + xJitter, -0.5, z + zJitter);
+
+      // Stalk
+      const stalk = new THREE.Mesh(stalkGeo, healthyStalkMat);
+      stalk.castShadow = true;
+      singlePlant.add(stalk);
+
+      // 4 to 6 arching leaves for crop canopy
+      const leafCount = 4 + Math.floor(Math.random() * 2);
+      for (let l = 0; l < leafCount; l++) {
+        const leaf = new THREE.Mesh(leafGeo, healthyFoliageMat);
+        const angle = (l / leafCount) * Math.PI * 2 + (Math.random() * 0.4);
+        leaf.position.set(0, 0.15 + (l * 0.06), 0);
+        leaf.rotation.y = angle;
+        leaf.rotation.z = 0.55 + (Math.random() * 0.25);
+        leaf.rotation.x = (Math.random() - 0.5) * 0.3;
+        leaf.scale.set(0.85 + Math.random()*0.3, 0.9 + Math.random()*0.3, 0.85 + Math.random()*0.3);
+        singlePlant.add(leaf);
+      }
+
+      // Height variation base
+      const normalScaleY = 0.85 + Math.random() * 0.3;
+      singlePlant.scale.set(1.0, normalScaleY, 1.0);
+
+      cropGroup.add(singlePlant);
+
+      crops.push({
+        group: singlePlant,
+        stalk: stalk,
+        leaves: singlePlant.children.filter(c => c !== stalk),
+        sector: sectorKey,
+        normalScaleY: normalScaleY,
+        currentScaleY: normalScaleY,
+        x: rx + xJitter,
+        z: z + zJitter,
+        isRow4B: (sectorKey === 'B' && Math.abs(rx - 3.8) < 0.4)
+      });
+    }
+  });
+
+  // Sector Highlights & Visual Overlay Markers
+  const sectorHighlights = {};
+  Object.keys(sectorConfigs).forEach(secKey => {
+    const cfg = sectorConfigs[secKey];
+    const width = cfg.maxX - cfg.minX;
+    const depth = cfg.maxZ - cfg.minZ;
+
+    // Boundary outline
+    const outlineGeo = new THREE.BufferGeometry();
+    const pts = [
+      new THREE.Vector3(cfg.minX, -0.48, cfg.minZ),
+      new THREE.Vector3(cfg.maxX, -0.48, cfg.minZ),
+      new THREE.Vector3(cfg.maxX, -0.48, cfg.maxZ),
+      new THREE.Vector3(cfg.minX, -0.48, cfg.maxZ),
+      new THREE.Vector3(cfg.minX, -0.48, cfg.minZ)
+    ];
+    outlineGeo.setFromPoints(pts);
+    const outlineMat = new THREE.LineBasicMaterial({ color: 0x3b4256, transparent: true, opacity: 0.6 });
+    const outline = new THREE.Line(outlineGeo, outlineMat);
+    worldGroup.add(outline);
+
+    // Floor glow plane
+    const planeGeo = new THREE.PlaneGeometry(width, depth);
+    const planeMat = new THREE.MeshBasicMaterial({
+      color: 0x8b5cf6,
+      transparent: true,
+      opacity: 0.0,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const highlightMesh = new THREE.Mesh(planeGeo, planeMat);
+    highlightMesh.rotation.x = -Math.PI / 2;
+    highlightMesh.position.set(cfg.centerX, -0.49, cfg.centerZ);
+    worldGroup.add(highlightMesh);
+
+    sectorHighlights[secKey] = {
+      mesh: highlightMesh,
+      outline: outline,
+      material: planeMat,
+      outlineMaterial: outlineMat
+    };
+  });
+
+  // Microdrone Construction (AEROAGRI Quadcopter AGRI-01)
+  const drone = new THREE.Group();
+  drone.position.set(0, 1.45, 0);
+  worldGroup.add(drone);
+
+  // Drone Central Body / Carbon Fiber Shell
+  const bodyGeo = new THREE.CylinderGeometry(0.32, 0.28, 0.12, 8);
+  const carbonMat = new THREE.MeshStandardMaterial({
+    color: 0x111319,
+    metalness: 0.85,
+    roughness: 0.35
+  });
+  const droneBody = new THREE.Mesh(bodyGeo, carbonMat);
+  drone.add(droneBody);
+
+  // Top Aerodynamic Pod
+  const podGeo = new THREE.SphereGeometry(0.24, 16, 12);
+  podGeo.scale(1.1, 0.45, 1.25);
+  const podMat = new THREE.MeshStandardMaterial({
+    color: 0x1a1d28,
+    metalness: 0.9,
+    roughness: 0.25
+  });
+  const pod = new THREE.Mesh(podGeo, podMat);
+  pod.position.y = 0.07;
+  drone.add(pod);
+
+  // Subtle Violet Glow Trim on Top Pod
+  const ringGeo = new THREE.TorusGeometry(0.18, 0.016, 8, 32);
+  const violetEmissiveMat = new THREE.MeshBasicMaterial({ color: 0x8b5cf6 });
+  const trimRing = new THREE.Mesh(ringGeo, violetEmissiveMat);
+  trimRing.rotation.x = Math.PI / 2;
+  trimRing.position.y = 0.085;
+  drone.add(trimRing);
+
+  // LiDAR Sensor Pod Underneath
+  const lidarHousingGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.12, 16);
+  const lidarHousingMat = new THREE.MeshStandardMaterial({
+    color: 0x090a0f,
+    metalness: 0.95,
+    roughness: 0.2
+  });
+  const lidarHousing = new THREE.Mesh(lidarHousingGeo, lidarHousingMat);
+  lidarHousing.position.y = -0.09;
+  drone.add(lidarHousing);
+
+  // LiDAR Optical Lens (Electric Violet Optical Aperture)
+  const lensGeo = new THREE.CylinderGeometry(0.075, 0.075, 0.02, 16);
+  const lensMat = new THREE.MeshStandardMaterial({
+    color: 0x7c3aed,
+    emissive: 0x8b5cf6,
+    emissiveIntensity: 0.9,
+    roughness: 0.1
+  });
+  const lidarLens = new THREE.Mesh(lensGeo, lensMat);
+  lidarLens.position.y = -0.15;
+  drone.add(lidarLens);
+
+  // Downward Pointing Spotlight for LiDAR Pulse
+  const lidarSpot = new THREE.SpotLight(0xa78bfa, 0.0, 10, Math.PI / 5, 0.4, 1.5);
+  lidarSpot.position.set(0, -0.16, 0);
+  lidarSpot.target.position.set(0, -2, 0);
+  drone.add(lidarSpot);
+  drone.add(lidarSpot.target);
+
+  // LiDAR Scanning Cone / Beam Mesh
+  const coneGeo = new THREE.ConeGeometry(0.9, 1.95, 32, 1, true);
+  coneGeo.translate(0, -0.975, 0);
+  const coneMat = new THREE.MeshBasicMaterial({
+    color: 0x8b5cf6,
+    transparent: true,
+    opacity: 0.0,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  const lidarBeamMesh = new THREE.Mesh(coneGeo, coneMat);
+  lidarBeamMesh.position.y = -0.15;
+  drone.add(lidarBeamMesh);
+
+  // LiDAR Ground Measurement Target Ring
+  const targetRingGeo = new THREE.RingGeometry(0.25, 0.32, 32);
+  const targetRingMat = new THREE.MeshBasicMaterial({
+    color: 0xa78bfa,
+    transparent: true,
+    opacity: 0.0,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  const targetRing = new THREE.Mesh(targetRingGeo, targetRingMat);
+  targetRing.rotation.x = -Math.PI / 2;
+  targetRing.position.set(0, -0.48, 0);
+  worldGroup.add(targetRing);
+
+  // LiDAR Point Cloud Particles (Measurement returns)
+  const pointCloudCount = 180;
+  const pointCloudGeo = new THREE.BufferGeometry();
+  const pointCloudPositions = new Float32Array(pointCloudCount * 3);
+  for (let p = 0; p < pointCloudCount; p++) {
+    pointCloudPositions[p * 3] = (Math.random() - 0.5) * 0.8;
+    pointCloudPositions[p * 3 + 1] = -0.48 + Math.random() * 0.4;
+    pointCloudPositions[p * 3 + 2] = (Math.random() - 0.5) * 0.8;
+  }
+  pointCloudGeo.setAttribute('position', new THREE.BufferAttribute(pointCloudPositions, 3));
+  const pointCloudMat = new THREE.PointsMaterial({
+    color: 0xc4b5fd,
+    size: 0.045,
+    transparent: true,
+    opacity: 0.0,
+    blending: THREE.AdditiveBlending
+  });
+  const pointCloud = new THREE.Points(pointCloudGeo, pointCloudMat);
+  worldGroup.add(pointCloud);
+
+  // 4 Quadcopter Carbon Arms and Motor Mounts
+  const propellers = [];
+  const armAngles = [Math.PI / 4, 3 * Math.PI / 4, 5 * Math.PI / 4, 7 * Math.PI / 4];
+  const armLength = 0.56;
+
+  armAngles.forEach((ang, idx) => {
+    // Arm tube
+    const armGeo = new THREE.CylinderGeometry(0.024, 0.024, armLength, 8);
+    const arm = new THREE.Mesh(armGeo, carbonMat);
+    arm.rotation.z = Math.PI / 2;
+    arm.rotation.y = -ang;
+    arm.position.x = Math.cos(ang) * (armLength / 2);
+    arm.position.z = Math.sin(ang) * (armLength / 2);
+    arm.position.y = -0.01;
+    drone.add(arm);
+
+    // Motor Pod
+    const motorGeo = new THREE.CylinderGeometry(0.065, 0.065, 0.09, 12);
+    const motor = new THREE.Mesh(motorGeo, carbonMat);
+    motor.position.x = Math.cos(ang) * armLength;
+    motor.position.z = Math.sin(ang) * armLength;
+    motor.position.y = 0.035;
+    drone.add(motor);
+
+    // Status LED light on motor undercarriage
+    const ledColor = (idx < 2) ? 0x8b5cf6 : 0x10b981; // Front violet, rear navigation green
+    const ledGeo = new THREE.SphereGeometry(0.022, 8, 8);
+    const ledMat = new THREE.MeshBasicMaterial({ color: ledColor });
+    const led = new THREE.Mesh(ledGeo, ledMat);
+    led.position.x = Math.cos(ang) * armLength;
+    led.position.z = Math.sin(ang) * armLength;
+    led.position.y = -0.02;
+    drone.add(led);
+
+    // Propeller Blades (2 carbon blades per motor)
+    const propGroup = new THREE.Group();
+    propGroup.position.set(Math.cos(ang) * armLength, 0.088, Math.sin(ang) * armLength);
+
+    const bladeGeo = new THREE.BoxGeometry(0.48, 0.007, 0.045);
+    const bladeMat = new THREE.MeshStandardMaterial({
+      color: 0x1c1e28,
+      metalness: 0.6,
+      roughness: 0.4
+    });
+    const blade = new THREE.Mesh(bladeGeo, bladeMat);
+    propGroup.add(blade);
+
+    // Subtle blur disc for fast spin visual fidelity
+    const blurGeo = new THREE.CircleGeometry(0.24, 16);
+    const blurMat = new THREE.MeshBasicMaterial({
+      color: 0x8b5cf6,
+      transparent: true,
+      opacity: 0.08,
+      side: THREE.DoubleSide
+    });
+    const blurDisc = new THREE.Mesh(blurGeo, blurMat);
+    blurDisc.rotation.x = Math.PI / 2;
+    propGroup.add(blurDisc);
+
+    drone.add(propGroup);
+    propellers.push({
+      group: propGroup,
+      dir: (idx % 2 === 0) ? 1 : -1
+    });
+  });
+
+  // Simulation State Controller
+  const simState = {
+    mode: 'healthy', // 'healthy' or 'problem'
+    isScanning: false,
+    scanProgress: 0,
+    scanWaypoints: [
+      { x: -3.4, z: -3.05, sector: 'A' },
+      { x: 3.4, z: -3.05, sector: 'B' },
+      { x: 3.4, z: 3.05, sector: 'D' },
+      { x: -3.4, z: 3.05, sector: 'C' },
+      { x: 0, z: 0, sector: 'CENTER' }
+    ],
+    currentWaypointIdx: 0,
+    droneTargetPos: new THREE.Vector3(0, 1.45, 0),
+    flightAltitude: 1.45,
+    highlightedSector: null
+  };
+
+  // Exposed API to Frontend
+  window.AEROAGRI_SIM = {
+    setDemoMode: function(mode) {
+      simState.mode = mode;
+      const isProblem = (mode === 'problem');
+
+      crops.forEach(c => {
+        if (c.sector === 'B') {
+          if (isProblem) {
+            // Low crop growth: 21 cm (reduced scale) and stressed color
+            c.currentScaleY = c.normalScaleY * 0.60;
+            c.stalk.material = attentionStalkMat;
+            c.leaves.forEach(l => l.material = attentionFoliageMat);
+          } else {
+            c.currentScaleY = c.normalScaleY;
+            c.stalk.material = healthyStalkMat;
+            c.leaves.forEach(l => l.material = healthyFoliageMat);
+          }
+        } else {
+          c.currentScaleY = c.normalScaleY;
+          c.stalk.material = healthyStalkMat;
+          c.leaves.forEach(l => l.material = healthyFoliageMat);
+        }
+      });
+
+      if (isProblem) {
+        this.highlightSector('B', 0xf59e0b); // Amber attention highlight
+      } else {
+        this.clearSectorHighlights();
+      }
+    },
+
+    highlightSector: function(secKey, colorHex = 0x8b5cf6) {
+      Object.keys(sectorHighlights).forEach(k => {
+        const sh = sectorHighlights[k];
+        if (k === secKey) {
+          sh.material.color.setHex(colorHex);
+          sh.material.opacity = 0.22;
+          sh.outlineMaterial.color.setHex(colorHex);
+          sh.outlineMaterial.opacity = 0.95;
+        } else {
+          sh.material.opacity = 0.0;
+          sh.outlineMaterial.color.setHex(0x3b4256);
+          sh.outlineMaterial.opacity = 0.4;
+        }
+      });
+      simState.highlightedSector = secKey;
+    },
+
+    clearSectorHighlights: function() {
+      Object.keys(sectorHighlights).forEach(k => {
+        const sh = sectorHighlights[k];
+        sh.material.opacity = 0.0;
+        sh.outlineMaterial.color.setHex(0x3b4256);
+        sh.outlineMaterial.opacity = 0.5;
+      });
+      simState.highlightedSector = null;
+    },
+
+    focusOnSector: function(secKey) {
+      const cfg = sectorConfigs[secKey];
+      if (cfg) {
+        simState.droneTargetPos.set(cfg.centerX, 1.45, cfg.centerZ);
+        this.highlightSector(secKey, secKey === 'B' && simState.mode === 'problem' ? 0xf59e0b : 0x8b5cf6);
+      }
+    },
+
+    startScanSequence: function(onProgress, onStep, onComplete) {
+      if (simState.isScanning) return;
+      simState.isScanning = true;
+      simState.scanProgress = 0;
+      simState.currentWaypointIdx = 0;
+
+      // Activate LiDAR visuals
+      lidarBeamMesh.material.opacity = 0.35;
+      lidarSpot.intensity = 2.8;
+      targetRing.material.opacity = 0.85;
+      pointCloudMat.opacity = 0.85;
+
+      const steps = ['READY', 'TAKING OFF', 'FLYING', 'SCANNING', 'PROCESSING', 'ANALYZING', 'RESULT'];
+      let stepIndex = 0;
+
+      const progressInterval = setInterval(() => {
+        simState.scanProgress += 2;
+        if (simState.scanProgress > 100) simState.scanProgress = 100;
+
+        // Waypoint navigation during scan
+        if (simState.scanProgress < 25) {
+          simState.droneTargetPos.set(sectorConfigs['A'].centerX, 1.55, sectorConfigs['A'].centerZ);
+          this.highlightSector('A', 0x8b5cf6);
+        } else if (simState.scanProgress < 50) {
+          simState.droneTargetPos.set(sectorConfigs['B'].centerX, 1.55, sectorConfigs['B'].centerZ);
+          this.highlightSector('B', simState.mode === 'problem' ? 0xf59e0b : 0x8b5cf6);
+        } else if (simState.scanProgress < 75) {
+          simState.droneTargetPos.set(sectorConfigs['D'].centerX, 1.55, sectorConfigs['D'].centerZ);
+          this.highlightSector('D', 0x8b5cf6);
+        } else if (simState.scanProgress < 95) {
+          simState.droneTargetPos.set(sectorConfigs['C'].centerX, 1.55, sectorConfigs['C'].centerZ);
+          this.highlightSector('C', 0x8b5cf6);
+        } else {
+          simState.droneTargetPos.set(0, 1.45, 0);
+        }
+
+        // Map progress to steps
+        const calculatedStep = Math.min(steps.length - 1, Math.floor((simState.scanProgress / 100) * steps.length));
+        if (calculatedStep !== stepIndex) {
+          stepIndex = calculatedStep;
+          if (onStep) onStep(steps[stepIndex]);
+        }
+
+        if (onProgress) onProgress(simState.scanProgress);
+
+        if (simState.scanProgress >= 100) {
+          clearInterval(progressInterval);
+          simState.isScanning = false;
+          // Dim LiDAR beam slightly
+          lidarBeamMesh.material.opacity = 0.12;
+          lidarSpot.intensity = 1.0;
+          targetRing.material.opacity = 0.3;
+          pointCloudMat.opacity = 0.3;
+          if (onComplete) onComplete(simState.mode);
+        }
+      }, 90);
+    },
+
+    resetToIdle: function() {
+      simState.droneTargetPos.set(0, 1.45, 0);
+      simState.isScanning = false;
+      simState.scanProgress = 0;
+      lidarBeamMesh.material.opacity = 0.08;
+      lidarSpot.intensity = 0.8;
+      targetRing.material.opacity = 0.2;
+      pointCloudMat.opacity = 0.2;
+      this.clearSectorHighlights();
+    }
+  };
+
+  // Default subtle idle state for LiDAR
+  lidarBeamMesh.material.opacity = 0.12;
+  lidarSpot.intensity = 1.0;
+  targetRing.material.opacity = 0.25;
+  pointCloudMat.opacity = 0.25;
+
+  // Animation Loop with Physical Believability & Parallax
+  let clock = new THREE.Clock();
+  let mouseX = 0, mouseY = 0;
+
+  window.addEventListener('mousemove', (e) => {
+    mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+    mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+  });
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const elapsedTime = clock.getElapsedTime();
+
+    // Propeller high-speed rotation
+    propellers.forEach(p => {
+      p.group.rotation.y += 0.42 * p.dir;
+    });
+
+    // Organic hover oscillation (subtle micro-turbulence and buoyancy)
+    const hoverY = Math.sin(elapsedTime * 2.2) * 0.05 + Math.cos(elapsedTime * 1.4) * 0.025;
+    const hoverPitch = Math.sin(elapsedTime * 1.8) * 0.035;
+    const hoverRoll = Math.cos(elapsedTime * 1.5) * 0.03;
+    const hoverYaw = Math.sin(elapsedTime * 0.8) * 0.05;
+
+    // Smooth drone position interpolation towards target
+    drone.position.x += (simState.droneTargetPos.x - drone.position.x) * 0.05;
+    drone.position.z += (simState.droneTargetPos.z - drone.position.z) * 0.05;
+    drone.position.y += (simState.droneTargetPos.y + hoverY - drone.position.y) * 0.06;
+
+    // Drone tilt reacting to acceleration
+    const velX = (simState.droneTargetPos.x - drone.position.x);
+    const velZ = (simState.droneTargetPos.z - drone.position.z);
+    drone.rotation.z = -velX * 0.2 + hoverRoll;
+    drone.rotation.x = velZ * 0.2 + hoverPitch;
+    drone.rotation.y = hoverYaw;
+
+    // Update Target Ring and Point Cloud underneath the drone
+    targetRing.position.x = drone.position.x;
+    targetRing.position.z = drone.position.z;
+    targetRing.rotation.z = elapsedTime * 0.8;
+
+    pointCloud.position.x = drone.position.x;
+    pointCloud.position.z = drone.position.z;
+    pointCloud.rotation.y = elapsedTime * 0.5;
+
+    // Subtle crop sway (breeze) + height scaling transitions
+    crops.forEach((c, idx) => {
+      // Scale transition
+      c.group.scale.y += (c.currentScaleY - c.group.scale.y) * 0.1;
+      // Slight wind wave across field
+      const wave = Math.sin(elapsedTime * 2.5 + c.x * 0.8 + c.z * 0.6) * 0.04;
+      c.group.rotation.z = wave;
+    });
+
+    // Camera gentle interactive parallax
+    const targetCamX = mouseX * 0.4;
+    const targetCamY = 3.6 + mouseY * 0.25;
+    camera.position.x += (targetCamX - camera.position.x) * 0.04;
+    camera.position.y += (targetCamY - camera.position.y) * 0.04;
+    camera.lookAt(drone.position.x * 0.3, 0.4, drone.position.z * 0.3);
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  // Responsive Resizing
+  window.addEventListener('resize', () => {
+    const w = container.clientWidth || window.innerWidth;
+    const h = container.clientHeight || window.innerHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  });
+})();
+
+})();
+</script>
+</div>
+<!-- STITCH_THREEJS_END:ANIMATION_2 -->
+
+<script>
+/* ===== AEROAGRI backend connection (added). The original frontend code above is unchanged. ===== */
+const API = location.protocol === 'file:' ? 'http://localhost:8080' : '';
+let backendOnline = false;
+let lastScanId = null;
+const el = id => document.getElementById(id);
+const setText = (id, t) => { const e = el(id); if (e) e.innerText = t; };
+
+// small connection banner (bottom-left)
+const statusBar = document.createElement('div');
+statusBar.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:9999;font:11px monospace;padding:6px 10px;border-radius:6px;background:#0e111a;border:1px solid #23283b;color:#94a3b8;max-width:360px';
+statusBar.innerText = 'Connecting to Java backend...';
+document.body.appendChild(statusBar);
+
+function setBackend(ok) {
+  backendOnline = ok;
+  statusBar.style.borderColor = ok ? '#10b981' : '#f59e0b';
+  statusBar.style.color = ok ? '#6ee7b7' : '#fcd34d';
+  statusBar.innerText = ok
+    ? 'Java backend connected | sensor data is SIMULATED (no real hardware)'
+    : 'Backend disconnected - showing built-in demo values. Start it with: mvn spring-boot:run';
+}
+
+async function api(path, options) {
+  const r = await fetch(API + path, options);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+function parseDetails(s) {
+  const o = {};
+  (s || '').split(';').forEach(p => { const kv = p.split('='); if (kv.length === 2) o[kv[0]] = kv[1]; });
+  return o;
+}
+
+function applySensors(list) {
+  setText('hw-label', 'SIMULATED SENSOR DATA');
+  list.forEach(s => {
+    if (s.error) return;
+    const d = parseDetails(s.details);
+    if (s.type === 'LiDAR') {
+      setText('dash-lidar-val', Math.round(s.value));
+      setText('sd-lidar-val', s.value.toFixed(1) + ' cm');
+      setText('sd-lidar-sub', 'Simulated reading | status ' + s.status);
+    } else if (s.type === 'GPS') {
+      setText('sd-gps-sub', s.value.toFixed(5) + ' N, ' + Number(d.lon).toFixed(5) + ' E | simulated | ' + d.satellites + ' SVs');
+    } else if (s.type === 'IMU') {
+      setText('sd-imu-val', s.value < 5 ? 'Stable' : 'Tilted');
+      setText('sd-imu-sub', 'Roll ' + d.roll + ' | Pitch ' + d.pitch + ' | Yaw ' + d.yaw + ' (simulated)');
+    }
+  });
+}
+
+async function refreshSensors() {
+  try { applySensors(await api('/api/sensors')); setBackend(true); } catch (e) { setBackend(false); }
+}
+
+async function loadDashboard() {
+  try {
+    const d = await api('/api/dashboard');
+    setBackend(true);
+    setText('dash-battery', d.drone.battery + '%');
+    setText('dash-field', d.field.name);
+    applySensors(d.latestReadings);
+    if (d.mode !== AppState.demoMode) _origSetDemoState(d.mode);   // sync mode with server
+    const h = await api('/api/scans/history');
+    if (h.length) lastScanId = h[0].id;
+  } catch (e) { setBackend(false); }
+}
+
+// ----- Healthy / Problem mode -----
+const _origSetDemoState = setDemoState;
+setDemoState = function (mode) {
+  _origSetDemoState(mode);
+  api('/api/demo/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) })
+    .then(() => { setBackend(true); refreshSensors(); })
+    .catch(() => setBackend(false));
+};
+
+// ----- Tab switch: refresh sensors when Sensor Data is opened -----
+const _origSwitchTab = switchTab;
+switchTab = function (tabId) {
+  _origSwitchTab(tabId);
+  if (tabId === 'sensor-data') refreshSensors();
+};
+
+// ----- Scan: existing animation + backend scan -----
+const _origScan = triggerFullScanWorkflow;
+triggerFullScanWorkflow = function () {
+  if (AppState.isScanning) return;
+  _origScan();
+  runBackendScan();
+};
+
+async function runBackendScan() {
+  try {
+    const scan = await api('/api/scans/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ field: 'Field A' }) });
+    lastScanId = scan.id;
+    setBackend(true);
+    let s = scan;
+    while (s.status !== 'COMPLETED') {            // simple polling every second
+      await new Promise(r => setTimeout(r, 1000));
+      s = await api('/api/scans/' + scan.id);
+    }
+    showResults(await api('/api/scans/' + scan.id + '/results'));
+  } catch (e) { setBackend(false); }
+}
+
+function showResults(r) {
+  r.sectors.forEach(s => {
+    const btn = document.querySelector("button[onclick=\"inspectSector('" + s.name + "')\"]");
+    const val = btn && btn.querySelector('div.text-base');
+    if (val) val.innerHTML = Math.round(s.avgHeightCm) + ' <span class="text-xs text-slate-400 font-normal">cm</span>';
+  });
+  const avg = Math.round(r.scan.avgHeight);
+  setText('res-h-summary', 'SENSOR SUMMARY: ' + r.sensorSummary);
+  setText('res-p-summary', r.sensorSummary);
+  setText('res-p-avg', avg + ' cm');
+  if (r.scan.overallStatus === 'NORMAL') {
+    setText('res-h-height', avg + ' cm');
+  } else {
+    const bad = r.sectors.find(s => s.status === 'ATTENTION');
+    setText('res-p-loc', 'Sector ' + bad.name + ' — Row ' + bad.problemRow);
+    setText('res-p-height', Math.round(bad.avgHeightCm) + ' cm');
+    el('res-p-expl').innerHTML = '<strong>WARNING:</strong> ' + r.scan.warning;
+  }
+}
+
+// ----- CSV report button (added to Results tab) -----
+const csvBtn = document.createElement('button');
+csvBtn.innerText = 'DOWNLOAD CSV REPORT';
+csvBtn.className = 'px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-xs transition';
+csvBtn.onclick = () => {
+  if (!backendOnline) { alert('Backend is disconnected.'); return; }
+  if (!lastScanId) { alert('Run a scan first.'); return; }
+  window.location.href = API + '/api/reports/scans/' + lastScanId + '/csv';
+};
+const resultsTab = el('tab-results');
+if (resultsTab) resultsTab.appendChild(csvBtn);
+
+// ----- start -----
+loadDashboard();
+setInterval(() => { if (!backendOnline) loadDashboard(); }, 5000);
+setInterval(() => { if (backendOnline && AppState.isLoggedIn && AppState.currentTab === 'sensor-data') refreshSensors(); }, 5000);
+</script>
+
+</body>
+</html>
